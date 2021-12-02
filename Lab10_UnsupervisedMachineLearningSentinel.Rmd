@@ -1,0 +1,142 @@
+---
+title: 'Lab 10: Remote Sensing Unsupervised ML'
+author: "Kyle Monahan"
+output: pdf_document
+---
+
+
+### Our data 
+
+In this walk through, we will be working with Sentinel-2 imagery. Remotely sensed data normally is made up of **bands** of data, as layers in a single image. These bands are sections of intensity within a certain range of wavelengths. 
+
+#### Example of bands
+
+For example, a single digital image can be composed of red, green and blue color bands. For example: 
+
+
+![RasterExample](Figures/3_RGB_Stack.jpg)
+
+**Figure 3.** The three layers that make up a RGB color image. Copyright NEON 2020. 
+
+
+### Bands in Sentinel  imagery
+
+In our case, Sentinel imagery is called **multi-spectral** as it detects 13 separate bands. There are referred to as Band 1, Band 2, Band 3, and so on until Band 12. There are two Band 8A.
+
+Each of these bands covers a different section of the electromagnetic spectrum, and can be used for different purposes. They are commonly combined into a band combination to detect specific objects or features. 
+
+## Loading the remote sensing data
+
+We will follow a tutorial for Sentinel 2 imagery developed by Dr. Abdi. Citation is below, along with a nice approach for clearing our RAM, or memory. We will be using all 8 GB in this lecture.
+
+
+```{r}
+#####################################################################################################
+# title         : Machine learning exercise for Sentinel-2 data
+# purpose       : Implementing a machine learning workflow in R 
+# author        : Abdulhakim M. Abdi (Twitter: @HakimAbdi / www.hakimabdi.com)
+# input         : A multi-temporal raster stack of Sentinel-2 data comprising scenes from four dates 
+# output        : One classified land cover map from each of three machine learning algorithms  
+# Note 1        : This brief tutorial assumes that you are already well-grounded in R concepts and are 
+#               : familiar with image classification procedure and terminology
+# Reference		  : Please cite Abdi (2020): "Land cover and land use classification performance of machine learning 
+#				        : algorithms in a boreal landscape using Sentinel-2 data" in GIScience & Remote Sensing if you find this 
+#               : tutorial useful in a publication. 
+# Reference URL	: https://doi.org/10.1080/15481603.2019.1650447
+# Data for Code : http://bit.ly/downloadMLtutorialdata 
+#####################################################################################################
+
+rm(list = ls(all.names = TRUE)) # will clear all objects, including hidden objects
+gc() # free up memory and report memory usage
+
+```
+
+
+### Install GDAL 
+
+For Windows and MacOS users, you will need to install GDAL. For this class, we will use the TTS Virtual Lab virtual image, but I want to mention this step as it would be necessary to work on your own machines. GDAL is the geodata abstraction library, and is what much of the geodata libraries are built on.
+
+### Install libraries 
+
+```{r}
+# List of all packages 
+load.lib<-c("tidyverse", "rgdal", "raster","caret","sp",
+"nnet","randomForest","kernlab","e1071")
+
+# tidyverse - a collection of packages
+# rgdal - the R GeoData Abstraction Layer (GDAL) - 
+
+# Loop through the packages, check if not installed, if true, install with dependencies. 
+
+install.lib<-load.lib[!load.lib %in% installed.packages()]
+for(lib in install.lib) install.packages(lib,dependencies=TRUE)
+sapply(load.lib,require,character=TRUE)
+```
+
+### Load the data
+
+We will load the raster data to get started. 
+
+#### Working directory 
+
+First set your working directory. Session > Set Working Directory > To Source File Location. 
+
+**Note: I am deviating from the tutorial a bit, and adding material, just FYI**
+
+Now we can load the data using the `raster` package and the `stack` method to load all of the layers. 
+
+```{r}
+# Load the Sentinel-2 stack of the study area, from the raster library
+s2data = raster::stack("Data/S2StackSmall.tif")
+
+# Name the layers of the Sentinel-2 stack based on previously saved information
+names(s2data) = as.character(read.csv("Data/S2StackSmall_Names.csv")[,1])
+
+```
+
+>>> BREAKOUT: Look at the object s2data by clicking on it under the Environment. What is inside?
+
+### Look at the data 
+
+These are bands of data directly from Sentinel, just cropped to an area of interest. This is focusing on a particular area of Sweden as an example, but you could choose anywhere. 
+
+### Prediction goal
+
+We select Sweden as we have data for **land cover**, and we would like to use Sentinel data to predict land cover. 
+
+
+### Unsupervised learning 
+
+Here we use kmeans to predict the class type. 
+```{r}
+
+# Set the seed
+set.seed(999)
+
+#We use the kmeans function and pass the image list into the function, assigning seven classes (clusters).
+
+kMeans_Results <- kmeans(s2data[], centers=7)
+
+# We use setValues to set the values in the raster equal to one of the layers in the RasterStack
+result <- setValues(s2data$B02M, kMeans_Results$cluster)
+
+# View the results
+plot(result)
+
+
+```
+
+
+## Summary of what we did
+
+* The same techniques of splitting into testing and training work here
+* Remotely sensed data can be more complex, but quite robust.
+* There are many GIS classes that will train you more in these methods, and this is one of my favorite topics in data science.
+* Neural nets, random forest and SVMs can all be adapted to use as a classifier.
+* In our case, random forst and SVMs worked best, but this may change depending on the problem. 
+
+
+### Learning more 
+
+For more details on this, check out NEON multiband raster training: https://www.neonscience.org/dc-multiband-rasters-r
+
